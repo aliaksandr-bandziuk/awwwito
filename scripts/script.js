@@ -21,7 +21,13 @@ const modalAdd = document.querySelector('.modal__add'),
    modalItem = document.querySelector('.modal__item'),
    // получаем надпись "заполните все поля"
    modalBtnWarning = document.querySelector('.modal__btn-warning'),
-   modalFileInput = document.querySelector('.modal__file-input');
+   modalFileInput = document.querySelector('.modal__file-input'),
+   modalFileBtn = document.querySelector('.modal__file-btn'),
+   modalImageAdd = document.querySelector('.modal__image-add');
+
+const textFileBtn = modalFileBtn.textContent;
+const srcModalImage = modalImageAdd.src;
+   
 
 // получаем элементы формы "Подать объявление"
 // добавляем spread (...)
@@ -72,12 +78,34 @@ const closeModal = event => {
          // если не удалить, он будет срабатывать после закрытия окна
          document.removeEventListener('keydown', closeModal);
          modalSubmit.reset();
+         // после закрытия очищаем фото
+         modalImageAdd.src = srcModalImage;
+         modalFileBtn.textContent = textFileBtn;
          checkForm();
       }
 };
 
+// так добавляем товары на страницу
+// функция берет нашу базу данных, перебирает ее и формирует верстку
+const renderCard = () => {
+   catalog.textContent = '';
+
+   dataBase.forEach((item, i) => {
+      catalog.insertAdjacentHTML('beforeend', `
+         <li class="card" data-id="${i}">
+            <img class="card__image" src="data:image/jpeg;base64,${item.image}" alt="test">
+            <div class="card__description">
+               <h3 class="card__header">${item.nameItem}</h3>
+               <div class="card__price">${item.costItem} ₽</div>
+            </div>
+         </li>
+      `);
+   });
+};
+
 // сохраняем фото
-modalFileInput.addEventListener('.change', event => {
+modalFileInput.addEventListener('change', event => {
+   
    const target = event.target;
 
    // эта функция при вызове возвращает объект
@@ -86,6 +114,29 @@ modalFileInput.addEventListener('.change', event => {
    const reader = new FileReader();
 
    const file = target.files[0];
+
+   infoPhoto.filename = file.name;
+   infoPhoto.size = file.size;
+
+   reader.readAsBinaryString(file);
+
+   // после загрузки текст на кнопке добавления меняется
+   reader.addEventListener('load', event => {
+
+      if (infoPhoto.size < 200000) {
+      modalFileBtn.textContent = infoPhoto.filename;
+      // конвертируем кортинку в строку
+      infoPhoto.base64 = btoa(event.target.result);
+      // фото меняется при добавлении в объявлении
+      modalImageAdd.src = `data:image/jpeg;base64,${infoPhoto.base64}`;
+      } else {
+         modalFileBtn.textContent = 'Залейте фото меньше 200 килобайт';
+         modalFileInput.value = '';
+         checkForm();
+      }
+
+      
+   });
 });
 
 
@@ -108,7 +159,9 @@ modalSubmit.addEventListener('submit', event => {
       // console.log(elem.name);
       // console.log(elem.value);
       // console.log(itemObj);
-         
+      
+      itemObj.image = infoPhoto.base64;
+
       // полученные элементы сохраняем в массив dataBase
       dataBase.push(itemObj);
       // закрывается модальное окно после нажатия на "отправить"
@@ -118,6 +171,7 @@ modalSubmit.addEventListener('submit', event => {
       console.log(dataBase);
       // сохряняем введенные данные при клике на "отправить"
       saveDB();
+      renderCard();
 });
 
 // открываем модальное окно
@@ -147,14 +201,4 @@ modalAdd.addEventListener('click', closeModal);
 // закрываем модальное окно второе
 modalItem.addEventListener('click', closeModal);
 
-   // закрываем модальное окно товаров
-   // это 
-   // modalItem.addEventListener('click', event => {
-   //    const target = event.target;
-
-   //    if (target.closest('.modal__close') ||
-   //    target === modalItem) {
-   //       modalItem.classList.add('hide');
-   //    }
-   // });
-
+renderCard();

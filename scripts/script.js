@@ -7,6 +7,8 @@
 //  написали|"| []" - если получим null, запишем пустой массив
 const dataBase = JSON.parse(localStorage.getItem('awwito')) || [];
 
+let counter = dataBase.length;
+
 // получам модальное окно
 const modalAdd = document.querySelector('.modal__add'),
    // получаем кнопку "подать объявление"
@@ -25,6 +27,25 @@ const modalAdd = document.querySelector('.modal__add'),
    modalFileBtn = document.querySelector('.modal__file-btn'),
    modalImageAdd = document.querySelector('.modal__image-add');
 
+// картинка в модальном окне
+const modalImageItem = document.querySelector('.modal__image-item'),
+   // название в модальном окне
+   modalHeaderItem = document.querySelector('.modal__header-item'),
+   // состояние в модальном окне
+   modalStatusItem = document.querySelector('.modal__status-item'),
+   // описание в модальном окне
+   modalDescriptionItem = document.querySelector('.modal__description-item'),
+   // цена в модальном окне
+   modalCostItem = document.querySelector('.modal__cost-item');
+
+// переменные для поиска
+// получаем инпут поиска
+const searchInput = document.querySelector('.search__input');
+
+// получаем меню
+const menuContainer = document.querySelector('.menu__container');
+
+
 const textFileBtn = modalFileBtn.textContent;
 const srcModalImage = modalImageAdd.src;
    
@@ -35,7 +56,7 @@ const srcModalImage = modalImageAdd.src;
 // elem - это каждый элемент массива
 // возвращаем все элементы попапа, кроме кнопки
 const elementsModalSubmit = [...modalSubmit.elements]
-   .filter(elem => elem.tagName !== 'BUTTON');
+   .filter(elem => elem.tagName !== 'BUTTON' && elem.type !== 'submit');
 
 // здесь будем хранить загруженные фото
 const infoPhoto = {};
@@ -87,12 +108,12 @@ const closeModal = event => {
 
 // так добавляем товары на страницу
 // функция берет нашу базу данных, перебирает ее и формирует верстку
-const renderCard = () => {
+const renderCard = (DB = dataBase) => {
    catalog.textContent = '';
 
-   dataBase.forEach((item, i) => {
+   DB.forEach(item => {
       catalog.insertAdjacentHTML('beforeend', `
-         <li class="card" data-id="${i}">
+         <li class="card" data-id-item="${item.id}">
             <img class="card__image" src="data:image/jpeg;base64,${item.image}" alt="test">
             <div class="card__description">
                <h3 class="card__header">${item.nameItem}</h3>
@@ -102,6 +123,18 @@ const renderCard = () => {
       `);
    });
 };
+
+// реализуем поиск
+searchInput.addEventListener('input', () => {
+   const valueSearch = searchInput.value.trim().toLowerCase();
+
+   // поиск при вводе больше 2 символов
+   if (valueSearch.length > 2) {
+      const result = dataBase.filter(item => item.nameItem.toLowerCase().includes(valueSearch) ||
+                                    item.descriptionItem.toLowerCase().includes(valueSearch));
+      renderCard(result);
+   }
+});
 
 // сохраняем фото
 modalFileInput.addEventListener('change', event => {
@@ -133,9 +166,7 @@ modalFileInput.addEventListener('change', event => {
          modalFileBtn.textContent = 'Залейте фото меньше 200 килобайт';
          modalFileInput.value = '';
          checkForm();
-      }
-
-      
+      } 
    });
 });
 
@@ -150,6 +181,7 @@ modalSubmit.addEventListener('submit', event => {
    event.preventDefault();
    // в этот объект добавляем свойства и значения из name/value
    const itemObj = {};
+
    // перебираем каждый элемент в форме Подать объявление"
    for (const elem of elementsModalSubmit) {
          
@@ -160,6 +192,7 @@ modalSubmit.addEventListener('submit', event => {
       // console.log(elem.value);
       // console.log(itemObj);
       
+      itemObj.id = counter++;
       itemObj.image = infoPhoto.base64;
 
       // полученные элементы сохраняем в массив dataBase
@@ -187,12 +220,35 @@ catalog.addEventListener('click', event => {
    // устанавливаем цель клика в каталоге
    //картинка, заголовок, цена...
    const target = event.target;
+   const card = target.closest('.card');
 
    // если при клике добираемся до 'card'...
-   if (target.closest('.card')) {
+   if (card) {
+      const item = dataBase.find((obj) => obj.id === parseInt(card.dataset.idItem));
+
+      modalImageItem.src = `data:image/jpeg;base64,${item.image}`;
+      
+      modalHeaderItem.textContent = item.nameItem;
+      modalStatusItem.textContent = item.status === 'new' ? 'Новый' : 'Б/У';
+      modalDescriptionItem.textContent = item.descriptionItem;
+      modalCostItem.textContent = item.costItem;
       // ...то убираем у модального окна класс 'hide'
       modalItem.classList.remove('hide');
       document.addEventListener('keydown', closeModal);
+   }
+});
+
+// обрабатываем клик на меню
+menuContainer.addEventListener('click', event => {
+   // target - элемент, на который кликнули
+   const target = event.target;
+
+   // сравниваем таргет со ссылкой
+   // A - это ссылка
+   if (target.tagName === 'A') {
+      const result = dataBase.filter(item => item.category === target.dataset.category);
+
+      renderCard(result);
    }
 });
 
